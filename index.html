@@ -12,6 +12,7 @@
     .q-title { font-weight: bold; margin-bottom: 8px; }
     label { display: block; padding: 12px; margin: 6px 0; border: 1px solid #ccc; border-radius: 8px; }
     input[type=radio] { margin-right: 8px; transform: scale(1.3); }
+    input[type=text] { width: 100%; box-sizing: border-box; padding: 12px; font-size: 18px; border: 1px solid #ccc; border-radius: 8px; }
     button { width: 100%; padding: 14px; font-size: 18px; border: none; border-radius: 8px; margin-top: 12px; }
     .primary { background: #06c755; color: #fff; }
     .secondary { background: #e0e0e0; }
@@ -33,6 +34,11 @@
     <h2 id="greeting"></h2>
 
     <div class="q">
+      <div class="q-title">お名前（本名）を入力してください</div>
+      <input type="text" id="realname" maxlength="50" autocomplete="name" placeholder="例：町内 太郎">
+    </div>
+
+    <div class="q">
       <div class="q-title">あなたの住んでいるエリアは？</div>
       <label><input type="radio" name="area" value="1・2丁目">1・2丁目</label>
       <label><input type="radio" name="area" value="3・4丁目">3・4丁目</label>
@@ -40,7 +46,7 @@
     </div>
 
     <div class="q">
-      <div class="q-title">あなたの町内会での役割は？</div>
+      <div class="q-title">町内会での役割は？</div>
       <label><input type="radio" name="role" value="役員">役員</label>
       <label><input type="radio" name="role" value="班長">班長</label>
       <label><input type="radio" name="role" value="一般会員">一般会員</label>
@@ -56,7 +62,8 @@
   <div id="screen-confirm" class="hidden">
     <h2>この内容で送信しますか？</h2>
     <div class="box">
-      <p>お名前：<span id="c-name"></span></p>
+      <p>LINEの名前：<span id="c-name"></span></p>
+      <p>お名前（本名）：<span id="c-realname"></span></p>
       <p>エリア：<span id="c-area"></span></p>
       <p>役割：<span id="c-role"></span></p>
     </div>
@@ -73,7 +80,7 @@
   </div>
 
   <script>
-    const LIFF_ID = "2009952953-Dec51hwe";
+    const LIFF_ID = "ここに練習用のLIFF IDを入れる";
     let displayName = "";
 
     // 表示する画面を切り替える
@@ -89,17 +96,24 @@
       return el ? el.value : null;
     }
 
+    // 本名の入力欄の値（前後の空白を取り除く）
+    function getRealName() {
+      return document.getElementById("realname").value.trim();
+    }
+
     // 「確認する」ボタン
     document.getElementById("btn-confirm").addEventListener("click", function () {
+      const realName = getRealName();
       const area = getValue("area");
       const role = getValue("role");
       const err = document.getElementById("error");
-      if (!area || !role) {
-        err.textContent = "すべての質問に答えてください";
+      if (!realName || !area || !role) {
+        err.textContent = "お名前と、すべての質問に答えてください";
         return;
       }
       err.textContent = "";
       document.getElementById("c-name").textContent = displayName;
+      document.getElementById("c-realname").textContent = realName;
       document.getElementById("c-area").textContent = area;
       document.getElementById("c-role").textContent = role;
       show("screen-confirm");
@@ -113,7 +127,8 @@
     // 「送信する」ボタン（今はデータを表示するだけ）
     document.getElementById("btn-submit").addEventListener("click", function () {
       const data = {
-        name: displayName,
+        lineName: displayName,
+        realName: getRealName(),
         area: getValue("area"),
         role: getValue("role"),
         time: new Date().toISOString()
