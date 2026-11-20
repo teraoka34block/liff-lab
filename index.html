@@ -14,12 +14,12 @@
     input[type=radio] { margin-right: 8px; transform: scale(1.3); }
     input[type=text] { width: 100%; box-sizing: border-box; padding: 12px; font-size: 18px; border: 1px solid #ccc; border-radius: 8px; }
     button { width: 100%; padding: 14px; font-size: 18px; border: none; border-radius: 8px; margin-top: 12px; }
+    button:disabled { opacity: 0.5; }
     .primary { background: #06c755; color: #fff; }
     .secondary { background: #e0e0e0; }
     .error { color: #d00; min-height: 1.6em; }
     .hidden { display: none; }
     .box { background: #f5f5f5; padding: 12px; border-radius: 8px; }
-    pre { white-space: pre-wrap; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -67,6 +67,7 @@
       <p>エリア：<span id="c-area"></span></p>
       <p>役割：<span id="c-role"></span></p>
     </div>
+    <div id="submit-msg" class="error"></div>
     <button id="btn-submit" class="primary">送信する</button>
     <button id="btn-back" class="secondary">戻って直す</button>
   </div>
@@ -74,13 +75,12 @@
   <!-- 画面3：完了 -->
   <div id="screen-done" class="hidden">
     <h2>ありがとうございました</h2>
-    <p>（練習のため、まだ保存はしていません）</p>
-    <p>送られる予定だったデータ：</p>
-    <pre id="sent-data" class="box"></pre>
+    <p>回答を受け付けました。このまま画面を閉じてください。</p>
   </div>
 
   <script>
     const LIFF_ID = "2009952953-Dec51hwe";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbz-7KSnhbtG_k6bpo0Mbug13FVHgO9ZZOSWbiObwypfMl0dqa76BMxSI8FAeV_BdWiw/exec";
     let displayName = "";
 
     // 表示する画面を切り替える
@@ -96,26 +96,27 @@
       return el ? el.value : null;
     }
 
-    // 本名の入力欄の値（前後の空白を取り除く）
+    // 本名の入力欄の値（前後の空白を取り除く。空欄でもよい）
     function getRealName() {
       return document.getElementById("realname").value.trim();
     }
 
-    // 「確認する」ボタン
+    // 「確認する」ボタン（本名は必須にしていない）
     document.getElementById("btn-confirm").addEventListener("click", function () {
       const realName = getRealName();
       const area = getValue("area");
       const role = getValue("role");
       const err = document.getElementById("error");
-      if (!realName || !area || !role) {
-        err.textContent = "お名前と、すべての質問に答えてください";
+      if (!area || !role) {
+        err.textContent = "エリアと役割を選んでください";
         return;
       }
       err.textContent = "";
       document.getElementById("c-name").textContent = displayName;
-      document.getElementById("c-realname").textContent = realName;
+      document.getElementById("c-realname").textContent = realName || "（LINEの名前と同じ）";
       document.getElementById("c-area").textContent = area;
       document.getElementById("c-role").textContent = role;
+      document.getElementById("submit-msg").textContent = "";
       show("screen-confirm");
     });
 
@@ -124,17 +125,30 @@
       show("screen-form");
     });
 
-    // 「送信する」ボタン（今はデータを表示するだけ）
+    // 「送信する」ボタン（GASに送って、スプレッドシートに保存する）
     document.getElementById("btn-submit").addEventListener("click", function () {
+      const btn = document.getElementById("btn-submit");
+      const msg = document.getElementById("submit-msg");
       const data = {
         lineName: displayName,
-        realName: getRealName(),
+        realName: getRealName(),   // 空欄なら、スプレッドシートの本名の列も空欄になる
         area: getValue("area"),
-        role: getValue("role"),
-        time: new Date().toISOString()
+        role: getValue("role")
       };
-      document.getElementById("sent-data").textContent = JSON.stringify(data, null, 2);
-      show("screen-done");
+      btn.disabled = true;          // 二重送信を防ぐ
+      msg.textContent = "送信中です。少しお待ちください...";
+      fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+          if (!result.ok) {
+            throw new Error(result.error || "保存に失敗しました");
+          }
+          show("screen-done");
+        })
+        .catch(function (err) {
+          msg.textContent = "送信できませんでした：" + err.message + "（もう一度お試しください）";
+          btn.disabled = false;
+        });
     });
 
     // LIFFの開始
