@@ -82,6 +82,7 @@
     const LIFF_ID = "2009952953-Dec51hwe";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbz-7KSnhbtG_k6bpo0Mbug13FVHgO9ZZOSWbiObwypfMl0dqa76BMxSI8FAeV_BdWiw/exec";
     let displayName = "";
+    let userId = "";
 
     // 表示する画面を切り替える
     function show(id) {
@@ -131,6 +132,7 @@
       const msg = document.getElementById("submit-msg");
       const data = {
         lineName: displayName,
+        userId: userId,
         realName: getRealName(),   // 空欄なら、スプレッドシートの本名の列も空欄になる
         area: getValue("area"),
         role: getValue("role")
@@ -163,6 +165,7 @@
       .then(function (profile) {
         if (!profile) return;
         displayName = profile.displayName;
+        userId = profile.userId;
         document.getElementById("greeting").textContent = "こんにちは、" + displayName + "さん";
         show("screen-form");
       })
