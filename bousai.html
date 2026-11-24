@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>在宅安否確認報告</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 16px; font-size: 18px; line-height: 1.6; }
+    h2 { font-size: 22px; }
+    .lead { background: #fff8e1; padding: 10px 12px; border-radius: 8px; }
+    .q { margin: 20px 0; }
+    .q-title { font-weight: bold; margin-bottom: 8px; }
+    .note { font-size: 15px; color: #555; margin-bottom: 6px; }
+    label { display: block; padding: 12px; margin: 6px 0; border: 1px solid #ccc; border-radius: 8px; }
+    input[type=radio], input[type=checkbox] { margin-right: 8px; transform: scale(1.3); }
+    input[type=text], input[type=tel], textarea { width: 100%; box-sizing: border-box; padding: 12px; font-size: 18px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit; }
+    textarea { min-height: 90px; }
+    button { width: 100%; padding: 14px; font-size: 18px; border: none; border-radius: 8px; margin-top: 12px; }
+    button:disabled { opacity: 0.5; }
+    .primary { background: #06c755; color: #fff; }
+    .secondary { background: #e0e0e0; }
+    .error { color: #d00; min-height: 1.6em; }
+    .sticky { position: sticky; bottom: 0; background: #fff; padding: 6px 0 10px; }
+    .hidden { display: none; }
+    .box { background: #f5f5f5; padding: 12px; border-radius: 8px; }
+    .pre { white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+<body>
+
+  <!-- 画面0：読み込み中 -->
+  <div id="screen-loading">
+    <p>読み込み中...</p>
+  </div>
+
+  <!-- 画面1：質問 -->
+  <div id="screen-form" class="hidden">
+    <h2 id="greeting"></h2>
+    <p class="lead">寺岡連合町内会より、在宅避難の状況をご報告ください。黄色い旗の掲出もお願いします。</p>
+
+    <div class="q">
+      <div class="q-title">あなたのお名前（必須）</div>
+      <input type="text" id="realname" maxlength="50" autocomplete="name" placeholder="例：町内 太郎">
+    </div>
+
+    <div class="q">
+      <div class="q-title">あなたのご住所は何丁目ですか？（必須・1つ選ぶ）</div>
+      <label><input type="radio" name="area" value="寺岡１丁目">寺岡１丁目</label>
+      <label><input type="radio" name="area" value="寺岡２丁目">寺岡２丁目</label>
+      <label><input type="radio" name="area" value="寺岡３丁目">寺岡３丁目</label>
+      <label><input type="radio" name="area" value="寺岡４丁目">寺岡４丁目</label>
+      <label><input type="radio" name="area" value="寺岡５丁目">寺岡５丁目</label>
+      <label><input type="radio" name="area" value="寺岡６丁目">寺岡６丁目</label>
+      <label><input type="radio" name="area" value="寺岡以外地域">寺岡以外地域</label>
+    </div>
+
+    <div class="q">
+      <div class="q-title">住所の次は何番の何号ですか？</div>
+      <div class="note">記入例：2番1号</div>
+      <input type="text" id="address" maxlength="50">
+    </div>
+
+    <div class="q">
+      <div class="q-title">あなたやご家族の状況は？（必須・あてはまるものすべて）</div>
+      <label><input type="checkbox" name="family" value="私は無事です">私は無事です</label>
+      <label><input type="checkbox" name="family" value="家族も無事です">家族も無事です</label>
+      <label><input type="checkbox" name="family" value="救援をお願いします">救援をお願いします</label>
+    </div>
+
+    <div class="q">
+      <div class="q-title">ご自宅の状況は？（必須・あてはまるものすべて）</div>
+      <label><input type="checkbox" name="house" value="問題ありません" data-exclusive="1">問題ありません</label>
+      <label><input type="checkbox" name="house" value="部分損壊してます">部分損壊してます</label>
+      <label><input type="checkbox" name="house" value="全部倒壊です">全部倒壊です</label>
+    </div>
+
+    <div class="q">
+      <div class="q-title">ご自宅のインフラ（電気・ガス・水道等）は大丈夫ですか？（必須・あてはまるものすべて）</div>
+      <label><input type="checkbox" name="infra" value="問題ありません" data-exclusive="1">問題ありません</label>
+      <label><input type="checkbox" name="infra" value="電気が来てません">電気が来てません</label>
+      <label><input type="checkbox" name="infra" value="ガスが出ません">ガスが出ません</label>
+      <label><input type="checkbox" name="infra" value="水道が出ません">水道が出ません</label>
+    </div>
+
+    <div class="q">
+      <div class="q-title">連絡がほしい方は、電話番号をご記入ください</div>
+      <div class="note">防災部から連絡します</div>
+      <input type="tel" id="phone" maxlength="20" inputmode="tel" placeholder="例：090-1234-5678">
+    </div>
+
+    <div class="q">
+      <div class="q-title">この他に連絡したいことがあれば、ご記入ください</div>
+      <textarea id="message" maxlength="500"></textarea>
+    </div>
+
+    <div class="sticky">
+      <div id="error" class="error"></div>
+      <button id="btn-confirm" class="primary">確認する</button>
+    </div>
+  </div>
+
+  <!-- 画面2：確認 -->
+  <div id="screen-confirm" class="hidden">
+    <h2>この内容で送信しますか？</h2>
+    <div class="box">
+      <p>LINEの名前：<span id="c-line"></span></p>
+      <p>お名前：<span id="c-name"></span></p>
+      <p>丁目：<span id="c-area"></span></p>
+      <p>番地・号：<span id="c-address"></span></p>
+      <p>あなたやご家族の状況：<span id="c-family"></span></p>
+      <p>ご自宅の状況：<span id="c-house"></span></p>
+      <p>インフラ：<span id="c-infra"></span></p>
+      <p>電話番号：<span id="c-phone"></span></p>
+      <p>連絡事項：<span id="c-message" class="pre"></span></p>
+    </div>
+    <div id="submit-msg" class="error"></div>
+    <button id="btn-submit" class="primary">送信する</button>
+    <button id="btn-back" class="secondary">戻って直す</button>
+  </div>
+
+  <!-- 画面3：完了 -->
+  <div id="screen-done" class="hidden">
+    <h2>ご報告ありがとうございました</h2>
+    <p>報告を受け付けました。黄色い旗の掲出もお願いします。</p>
+    <p>内容を直したいときは、もう一度同じリンクから送信してください（前の内容が上書きされます）。</p>
+  </div>
+
+  <script>
+    const LIFF_ID = "2009952953-Dec51hwe";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyWktE-e8xuOUFFkIXm1SSK7DkjejKC3QDz9TiBQ_Q6NaljTEgrGVkv8AFidBM_vjoh/exec";
+    // うまく動かないときの、予備の報告先（不要なら "" にする）
+    const BACKUP_URL = "https://forms.gle/abqmFXyeZAgCenhy7";
+    let displayName = "";
+    let userId = "";
+
+    // 表示する画面を切り替える
+    function show(id) {
+      ["screen-loading", "screen-form", "screen-confirm", "screen-done"].forEach(function (s) {
+        document.getElementById(s).classList.toggle("hidden", s !== id);
+      });
+    }
+
+    // チェックされた値の一覧を返す
+    function getChecked(name) {
+      return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked'))
+        .map(function (el) { return el.value; });
+    }
+
+    // ラジオボタンの値を返す（未選択ならnull）
+    function getRadio(name) {
+      const a = getChecked(name);
+      return a.length ? a[0] : null;
+    }
+
+    // 記入欄の値（前後の空白を取り除く）
+    function getText(id) {
+      return document.getElementById(id).value.trim();
+    }
+
+    // エラー表示のあとに、予備の報告先のリンクを付ける
+    function appendBackup(el) {
+      if (!BACKUP_URL) return;
+      el.appendChild(document.createElement("br"));
+      const a = document.createElement("a");
+      a.href = BACKUP_URL;
+      a.textContent = "うまくいかないときは、こちらのフォームから報告してください";
+      el.appendChild(a);
+    }
+
+    // 「問題ありません」は、ほかの項目と同時に選べないようにする
+    document.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+      cb.addEventListener("change", function () {
+        if (!cb.checked) return;
+        document.querySelectorAll('input[name="' + cb.name + '"]').forEach(function (other) {
+          if (other === cb) return;
+          if (cb.dataset.exclusive || other.dataset.exclusive) other.checked = false;
+        });
+      });
+    });
+
+    // 「確認する」ボタン
+    document.getElementById("btn-confirm").addEventListener("click", function () {
+      const missing = [];
+      if (!getText("realname")) missing.push("お名前");
+      if (!getRadio("area")) missing.push("丁目");
+      if (getChecked("family").length === 0) missing.push("ご家族の状況");
+      if (getChecked("house").length === 0) missing.push("ご自宅の状況");
+      if (getChecked("infra").length === 0) missing.push("インフラ");
+      const err = document.getElementById("error");
+      if (missing.length > 0) {
+        err.textContent = "未入力：" + missing.join("、");
+        return;
+      }
+      err.textContent = "";
+      document.getElementById("c-line").textContent = displayName;
+      document.getElementById("c-name").textContent = getText("realname");
+      document.getElementById("c-area").textContent = getRadio("area");
+      document.getElementById("c-address").textContent = getText("address") || "（未記入）";
+      document.getElementById("c-family").textContent = getChecked("family").join("、");
+      document.getElementById("c-house").textContent = getChecked("house").join("、");
+      document.getElementById("c-infra").textContent = getChecked("infra").join("、");
+      document.getElementById("c-phone").textContent = getText("phone") || "（未記入）";
+      document.getElementById("c-message").textContent = getText("message") || "（未記入）";
+      document.getElementById("submit-msg").textContent = "";
+      show("screen-confirm");
+      window.scrollTo(0, 0);
+    });
+
+    // 「戻って直す」ボタン
+    document.getElementById("btn-back").addEventListener("click", function () {
+      show("screen-form");
+    });
+
+    // 「送信する」ボタン（GASに送って、スプレッドシートに保存する）
+    document.getElementById("btn-submit").addEventListener("click", function () {
+      const btn = document.getElementById("btn-submit");
+      const msg = document.getElementById("submit-msg");
+      const data = {
+        lineName: displayName,
+        userId: userId,
+        realName: getText("realname"),
+        area: getRadio("area"),
+        address: getText("address"),
+        family: getChecked("family").join("、"),
+        house: getChecked("house").join("、"),
+        infra: getChecked("infra").join("、"),
+        phone: getText("phone"),
+        message: getText("message")
+      };
+      btn.disabled = true;          // 二重送信を防ぐ
+      msg.textContent = "送信中です。少しお待ちください...";
+      fetch(GAS_URL, { method: "POST", body: JSON.stringify(data) })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+          if (!result.ok) {
+            throw new Error(result.error || "保存に失敗しました");
+          }
+          show("screen-done");
+          window.scrollTo(0, 0);
+        })
+        .catch(function (err) {
+          msg.textContent = "送信できませんでした：" + err.message;
+          appendBackup(msg);
+          btn.disabled = false;
+        });
+    });
+
+    // LIFFの開始
+    liff.init({ liffId: LIFF_ID })
+      .then(function () {
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        return liff.getProfile();
+      })
+      .then(function (profile) {
+        if (!profile) return;
+        displayName = profile.displayName;
+        userId = profile.userId;
+        document.getElementById("greeting").textContent = "こんにちは、" + displayName + "さん";
+        show("screen-form");
+      })
+      .catch(function (err) {
+        const el = document.getElementById("screen-loading");
+        el.textContent = "エラー：" + err.message;
+        appendBackup(el);
+      });
+  </script>
+</body>
+</html>
